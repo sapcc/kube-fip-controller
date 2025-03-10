@@ -50,3 +50,17 @@ renovate:
   assignees:
     - kengou
     - abhijith-darshan
+  packageRules:
+    - matchPackageNames: [
+        "github-actions"
+      ]
+      groupName: "github actions"
+      matchUpdateTypes: [
+        "major",
+        "minor",
+        "patch"
+      ]
+      minimumReleaseAge: "14 days"
+      extends: [
+        "helpers:pinGitHubActionDigests"
+      ]
