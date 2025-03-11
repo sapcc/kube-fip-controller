@@ -1,0 +1,66 @@
+# Configuration file for <https://github.com/sapcc/go-makefile-maker>
+
+metadata:
+  url: https://github.com/sapcc/kube-fip-controller
+
+binaries:
+  - name:        kube-fip-controller
+    fromPackage: ./cmd
+    installTo:   bin/
+
+dockerfile:
+  enabled: false
+
+golang:
+  setGoModVersion: false
+
+golangciLint:
+  createConfig: true
+
+goReleaser:
+  createConfig: true
+  binaryName: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+  format: .tar.gz
+  nameTemplate: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+githubWorkflow:
+  ci:
+    enabled: true
+    coveralls: false
+  pushContainerToGhcr:
+    enabled: true
+    platforms: "linux/amd64,linux/arm64"
+    tagStrategy:
+      - edge
+      - latest
+      - semver
+      - sha
+  securityChecks:
+    enabled: true
+  license:
+    enabled: false
+  release:
+    enabled: true
+
+makefile:
+  enabled: false
+
+renovate:
+  enabled: true
+  assignees:
+    - kengou
+    - abhijith-darshan
+  packageRules:
+    - matchPackageNames: [
+        "github-actions"
+      ]
+      groupName: "github actions"
+      matchUpdateTypes: [
+        "major",
+        "minor",
+        "patch"
+      ]
+      minimumReleaseAge: "14 days"
+      extends: [
+        "helpers:pinGitHubActionDigests"
+      ]
