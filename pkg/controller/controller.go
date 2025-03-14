@@ -25,8 +25,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -63,7 +63,7 @@ const (
 type Controller struct {
 	opts         config.Options
 	logger       log.Logger
-	queue        workqueue.RateLimitingInterface
+	queue        workqueue.TypedRateLimitingInterface[interface{}]
 	k8sFramework *frameworks.K8sFramework
 	osFramework  *frameworks.OSFramework
 }
@@ -89,7 +89,7 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 	c := &Controller{
 		opts:         opts,
 		logger:       log.With(logger, "component", "controller"),
-		queue:        workqueue.NewRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(30*time.Second, 600*time.Second)),
+		queue:        workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedItemExponentialFailureRateLimiter[interface{}](30*time.Second, 600*time.Second)),
 		k8sFramework: k8sFramework,
 		osFramework:  osFramework,
 	}
