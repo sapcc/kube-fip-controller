@@ -4,8 +4,7 @@ go 1.23.0
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/go-kit/kit v0.13.0
-	github.com/go-kit/log v0.2.0
+	github.com/go-kit/log v0.2.1
 	github.com/gophercloud/gophercloud v1.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
