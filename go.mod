@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/go-kit/kit v0.9.0
-	github.com/gophercloud/gophercloud v1.11.0
+	github.com/gophercloud/gophercloud v1.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
