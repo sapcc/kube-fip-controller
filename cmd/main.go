@@ -26,9 +26,9 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/sapcc/kube-fip-controller/pkg/config"
 	"github.com/sapcc/kube-fip-controller/pkg/controller"
