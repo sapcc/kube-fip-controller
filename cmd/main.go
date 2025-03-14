@@ -28,17 +28,18 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/sapcc/kube-fip-controller/pkg/config"
 	"github.com/sapcc/kube-fip-controller/pkg/controller"
 	"github.com/sapcc/kube-fip-controller/pkg/metrics"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
 	opts config.Options
 
-	BuildCommit,
-	BuildDate string
+	BuildDate   string
+	BuildCommit string
 )
 
 func init() {
@@ -75,7 +76,7 @@ func main() {
 
 	c, err := controller.New(opts, logger)
 	if err != nil {
-		level.Error(logger).Log("msg", "fatal error starting the controller", "err", err)
+		_ = level.Error(logger).Log("msg", "fatal error starting the controller", "err", err)
 		return
 	}
 
@@ -83,7 +84,7 @@ func main() {
 	go metrics.ServeMetrics(opts.MetricHost, opts.MetricPort, wg, stop, logger)
 
 	<-sigs
-	level.Info(logger).Log("msg", "shutting down")
+	_ = level.Info(logger).Log("msg", "shutting down")
 
 	wg.Wait()
 }

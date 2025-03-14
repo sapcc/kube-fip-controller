@@ -34,6 +34,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/pkg/errors"
+
 	"github.com/sapcc/kube-fip-controller/pkg/config"
 	"github.com/sapcc/kube-fip-controller/pkg/metrics"
 )
@@ -223,23 +224,21 @@ func (o *OSFramework) EnsureAssociatedInstanceAndFIP(server *servers.Server, fip
 		return o.associateInstanceAndFIP(server, fip.FloatingIP)
 	case server.ID:
 		// If the port belongs to the server, we can assume the FIP is already associated with the server and return here.
-		level.Info(o.logger).Log("msg", "FIP already attached to instance", "fip", fip.FloatingIP, "serverID", server.ID)
+		_ = level.Info(o.logger).Log("msg", "FIP already attached to instance", "fip", fip.FloatingIP, "serverID", server.ID)
 		return nil
 	default:
 		return fmt.Errorf("FIP already associated with another server %s", server.Name)
 	}
-
-	return nil
 }
 
 func (o *OSFramework) associateInstanceAndFIP(server *servers.Server, floatingIP string) error {
 	opts := computefip.AssociateOpts{
 		FloatingIP: floatingIP,
 	}
-	level.Info(o.logger).Log("msg", "attaching FIP to instance", "fip", floatingIP, "serverID", server.ID)
+	_ = level.Info(o.logger).Log("msg", "attaching FIP to instance", "fip", floatingIP, "serverID", server.ID)
 	err := computefip.AssociateInstance(o.computeClient, server.ID, opts).ExtractErr()
 	if err != nil {
-		level.Error(o.logger).Log("msg", "error attaching FIP to instance", "fip", floatingIP, "serverID", server.ID, "err", err)
+		_ = level.Error(o.logger).Log("msg", "error attaching FIP to instance", "fip", floatingIP, "serverID", server.ID, "err", err)
 		metrics.MetricErrorAssociateInstanceAndFIP.Inc()
 		return err
 	}
@@ -265,11 +264,11 @@ func (o *OSFramework) createFloatingIP(floatingIP, floatingNetworkID, subnetID, 
 	}
 	fip, err := neutronfip.Create(o.neutronClient, createOpts).Extract()
 	if err != nil {
-		level.Error(o.logger).Log("msg", "error creating floating ip", "floatingIP", floatingIP, "err", err)
+		_ = level.Error(o.logger).Log("msg", "error creating floating ip", "floatingIP", floatingIP, "err", err)
 		metrics.MetricErrorCreateFIP.Inc()
 		return nil, err
 	}
-	level.Info(o.logger).Log("msg", "created floating ip", "floatingIP", fip.FloatingIP, "id", fip.ID)
+	_ = level.Info(o.logger).Log("msg", "created floating ip", "floatingIP", fip.FloatingIP, "id", fip.ID)
 	return fip, nil
 }
 

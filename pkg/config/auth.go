@@ -20,7 +20,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -41,7 +40,7 @@ type Auth struct {
 
 // ReadAuthConfig reads a given configuration file and returns the ViceConfig object and if applicable an error.
 func ReadAuthConfig(filePath string) (*Auth, error) {
-	cfgBytes, err := ioutil.ReadFile(filePath)
+	cfgBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read configuration file")
 	}
