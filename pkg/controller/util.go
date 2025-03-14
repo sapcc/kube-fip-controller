@@ -33,25 +33,11 @@ const providerPrefix = "openstack:///"
 
 func getServerIDFromNode(node *corev1.Node) (string, error) {
 	providerStr := node.Spec.ProviderID
+	// nolint:staticcheck
 	if serverID := strings.TrimLeft(providerStr, providerPrefix); serverID != "" {
 		return serverID, nil
 	}
 	return "", errors.New("serverID not found in provider ID")
-}
-
-func getAnnotationValue(obj interface{}, lblKey string) (string, bool) {
-	objMeta, err := meta.Accessor(obj)
-	if err != nil {
-		return "", false
-	}
-
-	ann := objMeta.GetAnnotations()
-	if ann == nil {
-		return "", false
-	}
-
-	val, ok := ann[lblKey]
-	return val, ok
 }
 
 func getLabelValue(obj interface{}, lblKey string) (string, bool) {

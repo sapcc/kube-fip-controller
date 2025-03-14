@@ -25,17 +25,18 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/sapcc/kube-fip-controller/pkg/config"
-	"github.com/sapcc/kube-fip-controller/pkg/frameworks"
-	"github.com/sapcc/kube-fip-controller/pkg/metrics"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/sapcc/kube-fip-controller/pkg/config"
+	"github.com/sapcc/kube-fip-controller/pkg/frameworks"
+	"github.com/sapcc/kube-fip-controller/pkg/metrics"
 )
 
 const (
@@ -62,7 +63,7 @@ const (
 type Controller struct {
 	opts         config.Options
 	logger       log.Logger
-	queue        workqueue.RateLimitingInterface
+	queue        workqueue.TypedRateLimitingInterface[interface{}]
 	k8sFramework *frameworks.K8sFramework
 	osFramework  *frameworks.OSFramework
 }
@@ -88,7 +89,7 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 	c := &Controller{
 		opts:         opts,
 		logger:       log.With(logger, "component", "controller"),
-		queue:        workqueue.NewRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(30*time.Second, 600*time.Second)),
+		queue:        workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedItemExponentialFailureRateLimiter[interface{}](30*time.Second, 600*time.Second)),
 		k8sFramework: k8sFramework,
 		osFramework:  osFramework,
 	}
@@ -97,9 +98,9 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 		c.enqueueItem,
 		c.enqueueItem,
 		func(oldObj, newObj interface{}) {
-			old := oldObj.(*corev1.Node)
-			new := newObj.(*corev1.Node)
-			if !reflect.DeepEqual(old.GetAnnotations(), new.GetAnnotations()) || !reflect.DeepEqual(old.GetLabels(), new.GetLabels()) {
+			o := oldObj.(*corev1.Node)
+			n := newObj.(*corev1.Node)
+			if !reflect.DeepEqual(o.GetAnnotations(), n.GetAnnotations()) || !reflect.DeepEqual(o.GetLabels(), n.GetLabels()) {
 				c.enqueueItem(newObj)
 			}
 		},
@@ -112,10 +113,10 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	level.Info(c.logger).Log("msg", "starting controller")
+	_ = level.Info(c.logger).Log("msg", "starting controller")
 
 	c.k8sFramework.Run(stopCh)
-	level.Info(c.logger).Log("msg", "waiting for caches to sync")
+	_ = level.Info(c.logger).Log("msg", "waiting for caches to sync")
 
 	if !c.k8sFramework.WaitForCacheToSync(stopCh) {
 		utilruntime.HandleError(errors.New("timed out while waiting for informer caches to sync"))
@@ -132,7 +133,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 			select {
 			case <-ticker.C:
 				c.enqueueAllItems()
-				level.Info(c.logger).Log("msg", "completed another cycle", "interval", c.opts.RecheckInterval.String())
+				_ = level.Info(c.logger).Log("msg", "completed another cycle", "interval", c.opts.RecheckInterval.String())
 			case <-stopCh:
 				ticker.Stop()
 				return
@@ -141,7 +142,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 	}()
 
 	<-stopCh
-	level.Info(c.logger).Log("msg", "stopping controller")
+	_ = level.Info(c.logger).Log("msg", "stopping controller")
 }
 
 func (c *Controller) runWorker() {
@@ -167,19 +168,19 @@ func (c *Controller) syncHandler(key string) error {
 
 	node, exists, err := c.k8sFramework.GetNodeFromIndexerByKey(key)
 	if err != nil {
-		level.Error(c.logger).Log("msg", "failed to get object from store", "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed to get object from store", "err", err)
 		return err
 	}
 
 	if !exists {
-		level.Debug(c.logger).Log("msg", "node does not exist anymore", "key", key)
+		_ = level.Debug(c.logger).Log("msg", "node does not exist anymore", "key", key)
 		return nil
 	}
 
 	// Ignore the node if enable label is not set.
 	val, ok := getLabelValue(node, labelKubeFIPControllerEnabled)
 	if !ok || val != "true" {
-		level.Debug(c.logger).Log("msg", "ignoring node as label not set", "node", node.GetName(), "label", labelKubeFIPControllerEnabled)
+		_ = level.Debug(c.logger).Log("msg", "ignoring node as label not set", "node", node.GetName(), "label", labelKubeFIPControllerEnabled)
 		return nil
 	}
 
@@ -251,14 +252,14 @@ func (c *Controller) handleError(err error, key interface{}) {
 	metrics.MetricFailedOperations.Inc()
 
 	if c.queue.NumRequeues(key) < 5 {
-		level.Info(c.logger).Log("msg", "error syncing key", "key", key, "err", err)
+		_ = level.Info(c.logger).Log("msg", "error syncing key", "key", key, "err", err)
 		c.queue.AddRateLimited(key)
 		return
 	}
 
 	c.queue.Forget(key)
 	utilruntime.HandleError(err)
-	level.Info(c.logger).Log("msg", "dropping from queue", "key", key, "err", err)
+	_ = level.Info(c.logger).Log("msg", "dropping from queue", "key", key, "err", err)
 }
 
 func (c *Controller) enqueueItem(obj interface{}) {

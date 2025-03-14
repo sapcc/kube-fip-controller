@@ -23,8 +23,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/sapcc/kube-fip-controller/pkg/config"
+	"github.com/go-kit/log"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +35,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/watch"
+
+	"github.com/sapcc/kube-fip-controller/pkg/config"
 )
 
 const (
@@ -58,30 +59,33 @@ func NewK8sFramework(options config.Options, logger log.Logger) (*K8sFramework, 
 		rules.ExplicitPath = options.KubeConfig
 	}
 
-	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, overrides).ClientConfig()
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, overrides).ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &K8sFramework{
-		Clientset:    clientset,
+		Clientset:    clientSet,
 		logger:       log.With(logger, "component", "k8sFramework"),
-		nodeInformer: informersv1.NewNodeInformer(clientset, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}),
+		nodeInformer: informersv1.NewNodeInformer(clientSet, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}),
 	}, nil
 }
 
 // AddEventHandlerFuncsToNodeInformer adds EventHandlerFuncs to the node informer.
 func (k8s *K8sFramework) AddEventHandlerFuncsToNodeInformer(addFunc, deleteFunc func(obj interface{}), updateFunc func(oldObj, newObj interface{})) {
-	k8s.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := k8s.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    addFunc,
 		UpdateFunc: updateFunc,
 		DeleteFunc: deleteFunc,
 	})
+	if err != nil {
+		_ = k8s.logger.Log("msg", "failed to add event handlers to node informer", "err", err)
+	}
 }
 
 // Run starts the frameworks informers.
@@ -132,7 +136,7 @@ func (k8s *K8sFramework) AddLabelsToNode(ctx context.Context, node *corev1.Node,
 	return k8s.waitForNode(updatedNode, []watch.ConditionFunc{isNodeModified}...)
 }
 
-// GetNodeFromIndexerByKey returns a node by key from the informers indexer.
+// GetNodeFromIndexerByKey returns a node by key from the informer's indexer.
 func (k8s *K8sFramework) GetNodeFromIndexerByKey(key string) (*corev1.Node, bool, error) {
 	obj, _, err := k8s.nodeInformer.GetIndexer().GetByKey(key)
 	if err != nil || obj == nil {
@@ -147,7 +151,8 @@ func (k8s *K8sFramework) GetNodeInformerStore() cache.Store {
 }
 
 func (k8s *K8sFramework) waitForNode(node *corev1.Node, conditionFuncs ...watch.ConditionFunc) error {
-	ctx, _ := context.WithTimeout(context.TODO(), waitTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), waitTimeout)
+	defer cancel()
 	_, err := watch.UntilWithSync(
 		ctx,
 		&cache.ListWatch{
