@@ -76,6 +76,7 @@ func main() {
 
 	c, err := controller.New(opts, logger)
 	if err != nil {
+		//nolint:errcheck
 		_ = level.Error(logger).Log("msg", "fatal error starting the controller", "err", err)
 		return
 	}
@@ -84,6 +85,7 @@ func main() {
 	go metrics.ServeMetrics(opts.MetricHost, opts.MetricPort, wg, stop, logger)
 
 	<-sigs
+	//nolint:errcheck
 	_ = level.Info(logger).Log("msg", "shutting down")
 
 	wg.Wait()

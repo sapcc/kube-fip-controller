@@ -84,6 +84,7 @@ func (k8s *K8sFramework) AddEventHandlerFuncsToNodeInformer(addFunc, deleteFunc 
 		DeleteFunc: deleteFunc,
 	})
 	if err != nil {
+		//nolint:errcheck
 		_ = k8s.logger.Log("msg", "failed to add event handlers to node informer", "err", err)
 	}
 }

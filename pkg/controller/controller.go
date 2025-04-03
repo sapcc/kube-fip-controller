@@ -155,7 +155,6 @@ func (c *Controller) processNextItem() bool {
 	if quit {
 		return false
 	}
-
 	defer c.queue.Done(key)
 
 	err := c.syncHandler(key.(string))
@@ -283,6 +282,5 @@ func (c *Controller) getServer(node *corev1.Node) (*servers.Server, error) {
 			return server, nil
 		}
 	}
-
 	return c.osFramework.GetServerByName(node.GetName())
 }

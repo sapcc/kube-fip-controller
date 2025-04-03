@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -62,20 +63,28 @@ func ServeMetrics(host net.IP, port int, wg *sync.WaitGroup, stop <-chan struct{
 	addr := fmt.Sprintf("%s:%d", host.String(), port)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
+		//nolint:errcheck
 		_ = level.Error(logger).Log("msg", "failed serve prometheus metrics", "err", err)
 		return
 	}
 	defer func(l net.Listener) {
 		err := l.Close()
 		if err != nil {
+			//nolint:errcheck
 			_ = level.Error(logger).Log("msg", "failed to close listener", "err", err)
 		}
 	}(l)
+	//nolint:errcheck
 	_ = level.Info(logger).Log("msg", "serving prometheus metrics", "address", addr, "path", "/metrics")
 
 	go func() {
-		err = http.Serve(l, promhttp.Handler())
+		server := &http.Server{
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		server.Handler = promhttp.Handler()
+		err = server.Serve(l)
 		if err != nil {
+			//nolint:errcheck
 			_ = level.Error(logger).Log("msg", "failed to serve prometheus metrics", "err", err)
 			if err != nil {
 				return

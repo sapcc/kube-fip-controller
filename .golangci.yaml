@@ -150,10 +150,10 @@ linters:
     - sqlclosecheck
     - staticcheck
     - stylecheck
-    - tenv
     - typecheck
     - unconvert
     - unparam
     - unused
+    - usetesting
     - usestdlibvars
     - whitespace
