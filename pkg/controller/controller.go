@@ -49,7 +49,7 @@ const (
 	// labelFloatingNetworkName controls which floating network is used for the FIP.
 	labelFloatingNetworkName = "kube-fip-controller.ccloud.sap.com/floating-network-name"
 
-	//labelFloatingSubnetName controls which floating subnet is used for the FIP.
+	// labelFloatingSubnetName controls which floating subnet is used for the FIP.
 	labelFloatingSubnetName = "kube-fip-controller.ccloud.sap.com/floating-subnet-name"
 
 	// labelNodepoolName label used to identify nodepools
@@ -113,17 +113,17 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	_ = level.Info(c.logger).Log("msg", "starting controller")
+	_ = level.Info(c.logger).Log("msg", "starting controller") //nolint:errcheck
 
 	c.k8sFramework.Run(stopCh)
-	_ = level.Info(c.logger).Log("msg", "waiting for caches to sync")
+	_ = level.Info(c.logger).Log("msg", "waiting for caches to sync") //nolint:errcheck
 
 	if !c.k8sFramework.WaitForCacheToSync(stopCh) {
 		utilruntime.HandleError(errors.New("timed out while waiting for informer caches to sync"))
 		return
 	}
 
-	for i := 0; i < threadiness; i++ {
+	for range threadiness {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
@@ -133,7 +133,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 			select {
 			case <-ticker.C:
 				c.enqueueAllItems()
-				_ = level.Info(c.logger).Log("msg", "completed another cycle", "interval", c.opts.RecheckInterval.String())
+				_ = level.Info(c.logger).Log("msg", "completed another cycle", "interval", c.opts.RecheckInterval.String()) //nolint:errcheck
 			case <-stopCh:
 				ticker.Stop()
 				return
@@ -142,7 +142,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) {
 	}()
 
 	<-stopCh
-	_ = level.Info(c.logger).Log("msg", "stopping controller")
+	_ = level.Info(c.logger).Log("msg", "stopping controller") //nolint:errcheck
 }
 
 func (c *Controller) runWorker() {
@@ -167,19 +167,19 @@ func (c *Controller) syncHandler(key string) error {
 
 	node, exists, err := c.k8sFramework.GetNodeFromIndexerByKey(key)
 	if err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to get object from store", "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed to get object from store", "err", err) //nolint:errcheck
 		return err
 	}
 
 	if !exists {
-		_ = level.Debug(c.logger).Log("msg", "node does not exist anymore", "key", key)
+		_ = level.Debug(c.logger).Log("msg", "node does not exist anymore", "key", key) //nolint:errcheck
 		return nil
 	}
 
 	// Ignore the node if enable label is not set.
 	val, ok := getLabelValue(node, labelKubeFIPControllerEnabled)
 	if !ok || val != "true" {
-		_ = level.Debug(c.logger).Log("msg", "ignoring node as label not set", "node", node.GetName(), "label", labelKubeFIPControllerEnabled)
+		_ = level.Debug(c.logger).Log("msg", "ignoring node as label not set", "node", node.GetName(), "label", labelKubeFIPControllerEnabled) //nolint:errcheck
 		return nil
 	}
 
@@ -251,14 +251,14 @@ func (c *Controller) handleError(err error, key interface{}) {
 	metrics.MetricFailedOperations.Inc()
 
 	if c.queue.NumRequeues(key) < 5 {
-		_ = level.Info(c.logger).Log("msg", "error syncing key", "key", key, "err", err)
+		_ = level.Info(c.logger).Log("msg", "error syncing key", "key", key, "err", err) //nolint:errcheck
 		c.queue.AddRateLimited(key)
 		return
 	}
 
 	c.queue.Forget(key)
 	utilruntime.HandleError(err)
-	_ = level.Info(c.logger).Log("msg", "dropping from queue", "key", key, "err", err)
+	_ = level.Info(c.logger).Log("msg", "dropping from queue", "key", key, "err", err) //nolint:errcheck
 }
 
 func (c *Controller) enqueueItem(obj interface{}) {
