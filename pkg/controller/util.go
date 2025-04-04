@@ -33,7 +33,7 @@ const providerPrefix = "openstack:///"
 
 func getServerIDFromNode(node *corev1.Node) (string, error) {
 	providerStr := node.Spec.ProviderID
-	// nolint:staticcheck
+	//nolint:staticcheck
 	if serverID := strings.TrimLeft(providerStr, providerPrefix); serverID != "" {
 		return serverID, nil
 	}

@@ -53,7 +53,7 @@ func ReadAuthConfig(filePath string) (*Auth, error) {
 		return nil, errors.Wrap(err, "could not parse configuration")
 	}
 
-	err = tmp.Auth.verify()
+	err = tmp.verify()
 	return &tmp.Auth, err
 }
 

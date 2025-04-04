@@ -84,6 +84,7 @@ func (k8s *K8sFramework) AddEventHandlerFuncsToNodeInformer(addFunc, deleteFunc 
 		DeleteFunc: deleteFunc,
 	})
 	if err != nil {
+		//nolint:errcheck
 		_ = k8s.logger.Log("msg", "failed to add event handlers to node informer", "err", err)
 	}
 }
@@ -142,7 +143,7 @@ func (k8s *K8sFramework) GetNodeFromIndexerByKey(key string) (*corev1.Node, bool
 	if err != nil || obj == nil {
 		return nil, false, err
 	}
-	return obj.(*corev1.Node), true, nil
+	return obj.(*corev1.Node), true, nil //nolint:errcheck
 }
 
 // GetNodeInformerStore returns the Store of the node informer.

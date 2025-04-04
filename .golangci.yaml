@@ -1,0 +1,153 @@
+version: "2"
+run:
+  modules-download-mode: readonly
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - containedctx
+    - copyloopvar
+    - dupword
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - forbidigo
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - intrange
+    - misspell
+    - nilerr
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - predeclared
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
+  settings:
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - encoding/json.Marshal
+    forbidigo:
+      forbid:
+        - pattern: ^ioutil\..*$
+        - pattern: ^http\.DefaultServeMux$
+        - pattern: ^http\.Handle(?:Func)?$
+        - pkg: ^gopkg\.in/square/go-jose\.v2$
+          msg: gopk.in/square/go-jose is arcived and has CVEs. Replace it with gopkg.in/go-jose/go-jose.v2
+        - pkg: ^github.com/coreos/go-oidc$
+          msg: github.com/coreos/go-oidc depends on gopkg.in/square/go-jose which has CVEs. Replace it with github.com/coreos/go-oidc/v3
+        - pkg: ^github.com/howeyc/gopass$
+          msg: github.com/howeyc/gopass is archived, use golang.org/x/term instead
+      analyze-types: true
+    goconst:
+      min-occurrences: 5
+    gocritic:
+      enabled-checks:
+        - boolExprSimplify
+        - builtinShadow
+        - emptyStringTest
+        - evalOrder
+        - httpNoBody
+        - importShadow
+        - initClause
+        - methodExprCall
+        - paramTypeCombine
+        - preferFilepathJoin
+        - ptrToRefParam
+        - redundantSprint
+        - returnAfterHttpError
+        - stringConcatSimplify
+        - timeExprSimplify
+        - truncateCmp
+        - typeAssertChain
+        - typeUnparen
+        - unnamedResult
+        - unnecessaryBlock
+        - unnecessaryDefer
+        - weakCond
+        - yodaStyleExpr
+    gosec:
+      excludes:
+        - G112
+        - G306
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    misspell:
+      ignore-rules:
+        - metis
+    nolintlint:
+      require-specific: true
+    staticcheck:
+      dot-import-whitelist:
+        - github.com/onsi/ginkgo/v2
+        - github.com/onsi/gomega
+    usestdlibvars:
+      http-method: true
+      http-status-code: true
+      time-weekday: true
+      time-month: true
+      time-layout: true
+      crypto-hash: true
+      default-rpc-path: true
+      sql-isolation-level: true
+      tls-signature-scheme: true
+      constant-kind: true
+    whitespace:
+      multi-func: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - dupl
+        path: _test\.go
+      - path: (.+)\.go$
+        text: declaration of "err" shadows declaration at
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/cloudoperators/greenhouse
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
