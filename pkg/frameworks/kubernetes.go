@@ -143,7 +143,7 @@ func (k8s *K8sFramework) GetNodeFromIndexerByKey(key string) (*corev1.Node, bool
 	if err != nil || obj == nil {
 		return nil, false, err
 	}
-	return obj.(*corev1.Node), true, nil
+	return obj.(*corev1.Node), true, nil //nolint:errcheck
 }
 
 // GetNodeInformerStore returns the Store of the node informer.

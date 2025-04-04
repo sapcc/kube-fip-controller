@@ -98,8 +98,8 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 		c.enqueueItem,
 		c.enqueueItem,
 		func(oldObj, newObj interface{}) {
-			o := oldObj.(*corev1.Node)
-			n := newObj.(*corev1.Node)
+			o := oldObj.(*corev1.Node) //nolint:errcheck
+			n := newObj.(*corev1.Node) //nolint:errcheck
 			if !reflect.DeepEqual(o.GetAnnotations(), n.GetAnnotations()) || !reflect.DeepEqual(o.GetLabels(), n.GetLabels()) {
 				c.enqueueItem(newObj)
 			}
@@ -157,7 +157,7 @@ func (c *Controller) processNextItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	err := c.syncHandler(key.(string))
+	err := c.syncHandler(key.(string)) //nolint:errcheck
 	c.handleError(err, key)
 	return true
 }
