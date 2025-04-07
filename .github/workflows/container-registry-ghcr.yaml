@@ -20,13 +20,14 @@ name: Container Registry GHCR
     tags:
       - v*.*.*
   workflow_dispatch: {}
-permissions:
-  contents: read
-  packages: write
 jobs:
   build-and-push-image:
     name: Push container to ghcr.io
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     steps:
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -65,4 +66,30 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
+
+  vulnerability-scan:
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    name: Vulnerability Scan
+    needs: build-and-push-image
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # 0.30.0
+        if: success()
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
