@@ -23,7 +23,7 @@ name: Container Registry GHCR
 jobs:
   build-and-push-image:
     name: Push container to ghcr.io
-    runs-on: ubuntu-latest
+    runs-on: [ ubuntu-latest ]
     permissions:
       contents: read
       packages: write
@@ -48,7 +48,6 @@ jobs:
             # https://github.com/docker/metadata-action#latest-tag
             type=raw,value=latest,enable={{is_default_branch}}
             # https://github.com/docker/metadata-action#typesemver
-
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
             type=semver,pattern={{major}},prefix=v
@@ -64,15 +63,21 @@ jobs:
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
       - name: Build and push Docker image
+        id: build-and-push
         uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
         with:
           context: .
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: false
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          platforms: |
+            linux/amd64
+            linux/arm64
 
   vulnerability-scan:
     permissions:
