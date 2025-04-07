@@ -20,7 +20,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -33,14 +32,12 @@ import (
 	"github.com/sapcc/kube-fip-controller/pkg/config"
 	"github.com/sapcc/kube-fip-controller/pkg/controller"
 	"github.com/sapcc/kube-fip-controller/pkg/metrics"
+	"github.com/sapcc/kube-fip-controller/pkg/version"
 )
 
-var (
-	opts config.Options
+const programName = "kube-fip-controller"
 
-	BuildDate   string
-	BuildCommit string
-)
+var opts config.Options
 
 func init() {
 	kingpin.Flag("kubeconfig", "Absolute path to kubeconfig").StringVar(&opts.KubeConfig)
@@ -52,7 +49,7 @@ func init() {
 	kingpin.Flag("default-floating-network", "Name of the default Floating IP network.").Required().StringVar(&opts.DefaultFloatingNetwork)
 	kingpin.Flag("default-floating-subnet", "Name of the default Floating IP subnet.").Required().StringVar(&opts.DefaultFloatingSubnet)
 	kingpin.Flag("config", "Absolute path to configuration file.").Required().StringVar(&opts.ConfigPath)
-	kingpin.Version(fmt.Sprintf("%s (%s)", BuildCommit, BuildDate))
+	kingpin.Version(version.Print(programName))
 }
 
 func main() {

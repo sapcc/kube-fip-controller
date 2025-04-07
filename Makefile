@@ -20,7 +20,25 @@ bin/%/$(BINARY): BUILD_DATE  = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 bin/%/$(BINARY): $(GOFILES) Makefile
 	GOOS=$* GOARCH=amd64 go build -ldflags '-X github.com/sapcc/kube-fip-controller/cmd.BuildCommit=$(GIT_COMMIT) -X github.com/sapcc/kube-fip-controller/cmd.BuildDate=$(BUILD_DATE)' -v -o bin/$*/$(BINARY) ./cmd/main.go && chmod +x bin/$*/$(BINARY)
 
-build:
+# Build binary
+build: BUILD_DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+build: GIT_REVISION=$(shell git rev-parse --short HEAD)
+build: GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+build: VERSION=$(shell cat VERSION)
+build: fmt vet
+	go build\
+	  -ldflags "-s -w -X github.com/sapcc/kube-fip-controller/pkg/version.Revision=$(GIT_REVISION) -X github.com/sapcc/kube-fip-controller/pkg/version.Branch=$(GIT_BRANCH) -X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate=$(BUILD_DATE) -X github.com/sapcc/kube-fip-controller/pkg/version.Version=$(VERSION)"\
+      -o bin/kube-fip-controller cmd/main.go
+
+# Run go fmt against code
+fmt:
+	go fmt ./...
+
+# Run go vet against code
+vet:
+	go vet ./...
+
+docker-build:
 	docker build $(OPTS) -t $(IMAGE):$(VERSION) .
 
 static-check:
@@ -30,7 +48,7 @@ static-check:
 tests: all static-check
 	DEBUG=1 && go test -v github.com/sapcc/kube-fip-controller/pkg/controller
 
-push: build
+push: docker-build
 	docker push $(IMAGE):$(VERSION)
 
 clean:
@@ -65,5 +83,5 @@ check-dependency-licenses: install-go-licence-detector
 build/cover.out: build
 	test -d build || mkdir build
 	@printf "\e[1;36m>> Running tests\e[0m\n"
-	@env $(GO_TESTENV) go test -shuffle=on -p 1 -coverprofile=$@ $(GO_BUILDFLAGS) -ldflags "-s -w -X github.com/sapcc/git-cert-shim/pkg/version.Revision=$(GIT_REVISION) -X github.com/sapcc/git-cert-shim/pkg/version.Branch=$(GIT_BRANCH) -X github.com/sapcc/git-cert-shim/pkg/version.BuildDate=$(BUILD_DATE) -X github.com/sapcc/git-cert-shim/pkg/version.Version=$(VERSION)" -covermode=count -coverpkg=$(subst $(space),$(comma),$(GO_COVERPKGS)) $(GO_TESTPKGS)
+	@env $(GO_TESTENV) go test -shuffle=on -p 1 -coverprofile=$@ $(GO_BUILDFLAGS) -ldflags "-s -w -X github.com/sapcc/kube-fip-controller/pkg/version.Revision=$(GIT_REVISION) -X github.com/sapcc/kube-fip-controller/pkg/version.Branch=$(GIT_BRANCH) -X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate=$(BUILD_DATE) -X github.com/sapcc/kube-fip-controller/pkg/version.Version=$(VERSION)" -covermode=count -coverpkg=$(subst $(space),$(comma),$(GO_COVERPKGS)) $(GO_TESTPKGS)
 
