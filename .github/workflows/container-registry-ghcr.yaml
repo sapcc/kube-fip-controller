@@ -64,6 +64,13 @@ jobs:
             type=schedule
             type=raw,value=${{ github.sha }}
             type=sha,enable=true,format=short,prefix=
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
@@ -75,6 +82,7 @@ jobs:
           provenance: false
           platforms: |
             linux/amd64
+            linux/arm64
 
   vulnerability-scan:
     permissions:
@@ -97,6 +105,5 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@fc7e4a0fa01c3cca5fd6a1fddec5c0740c977aa2 # v3
-        if: always()
         with:
           sarif_file: trivy-results.sarif
