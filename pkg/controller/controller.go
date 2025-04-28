@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -68,6 +68,10 @@ type Controller struct {
 	osFramework  *frameworks.OSFramework
 }
 
+var (
+	ctx = context.Background()
+)
+
 // New returns a new Controller or an error.
 func New(opts config.Options, logger log.Logger) (*Controller, error) {
 	authConfig, err := config.ReadAuthConfig(opts.ConfigPath)
@@ -81,7 +85,7 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 		return nil, err
 	}
 
-	osFramework, err := frameworks.NewOSFramework(opts, logger)
+	osFramework, err := frameworks.NewOSFramework(ctx, opts, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +167,6 @@ func (c *Controller) processNextItem() bool {
 }
 
 func (c *Controller) syncHandler(key string) error {
-	ctx := context.Background()
-
 	node, exists, err := c.k8sFramework.GetNodeFromIndexerByKey(key)
 	if err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed to get object from store", "err", err) //nolint:errcheck
@@ -188,7 +190,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingNetworkName = val
 	}
 
-	floatingNetworkID, err := c.osFramework.GetNetworkIDByName(floatingNetworkName)
+	floatingNetworkID, err := c.osFramework.GetNetworkIDByName(ctx, floatingNetworkName)
 	if err != nil {
 		return err
 	}
@@ -198,7 +200,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingSubnetName = val
 	}
 
-	floatingSubnetID, err := c.osFramework.GetSubnetIDByName(floatingSubnetName)
+	floatingSubnetID, err := c.osFramework.GetSubnetIDByName(ctx, floatingSubnetName)
 	if err != nil {
 		return err
 	}
@@ -208,7 +210,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingIP = val
 	}
 
-	server, err := c.getServer(node)
+	server, err := c.getServer(ctx, node)
 	if err != nil {
 		return err
 	}
@@ -223,7 +225,7 @@ func (c *Controller) syncHandler(key string) error {
 		reuseFIPs = (val == "true")
 	}
 
-	fip, err := c.osFramework.GetOrCreateFloatingIP(floatingIP, floatingNetworkID, floatingSubnetID, server.TenantID, nodepool, reuseFIPs)
+	fip, err := c.osFramework.GetOrCreateFloatingIP(ctx, floatingIP, floatingNetworkID, floatingSubnetID, server.TenantID, nodepool, reuseFIPs)
 	if err != nil {
 		return err
 	}
@@ -239,7 +241,7 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	return c.osFramework.EnsureAssociatedInstanceAndFIP(server, fip)
+	return c.osFramework.EnsureAssociatedInstanceAndFIP(ctx, server, fip)
 }
 
 func (c *Controller) handleError(err error, key interface{}) {
@@ -276,11 +278,11 @@ func (c *Controller) enqueueAllItems() {
 	}
 }
 
-func (c *Controller) getServer(node *corev1.Node) (*servers.Server, error) {
+func (c *Controller) getServer(ctx context.Context, node *corev1.Node) (*servers.Server, error) {
 	if serverID, err := getServerIDFromNode(node); err == nil {
-		if server, err := c.osFramework.GetServerByID(serverID); err == nil {
+		if server, err := c.osFramework.GetServerByID(ctx, serverID); err == nil {
 			return server, nil
 		}
 	}
-	return c.osFramework.GetServerByName(node.GetName())
+	return c.osFramework.GetServerByName(ctx, node.GetName())
 }

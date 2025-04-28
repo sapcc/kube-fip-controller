@@ -20,19 +20,19 @@
 package frameworks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	computefip "github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
-	neutronfip "github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
+	neutronfip "github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"github.com/pkg/errors"
 
 	"github.com/sapcc/kube-fip-controller/pkg/config"
@@ -56,8 +56,8 @@ type OSFramework struct {
 }
 
 // NewOSFramework returns a new OSFramework.
-func NewOSFramework(opts config.Options, logger log.Logger) (*OSFramework, error) {
-	provider, err := newAuthenticatedProviderClient(opts.Auth)
+func NewOSFramework(ctx context.Context, opts config.Options, logger log.Logger) (*OSFramework, error) {
+	provider, err := newAuthenticatedProviderClient(ctx, opts.Auth)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to authenticate")
 	}
@@ -81,7 +81,7 @@ func NewOSFramework(opts config.Options, logger log.Logger) (*OSFramework, error
 	}, nil
 }
 
-func newAuthenticatedProviderClient(auth *config.Auth) (*gophercloud.ProviderClient, error) {
+func newAuthenticatedProviderClient(ctx context.Context, auth *config.Auth) (*gophercloud.ProviderClient, error) {
 	opts := &tokens.AuthOptions{
 		IdentityEndpoint: auth.AuthURL,
 		Username:         auth.Username,
@@ -99,18 +99,18 @@ func newAuthenticatedProviderClient(auth *config.Auth) (*gophercloud.ProviderCli
 		return nil, err
 	}
 
-	err = openstack.AuthenticateV3(provider, opts, gophercloud.EndpointOpts{})
+	err = openstack.AuthenticateV3(ctx, provider, opts, gophercloud.EndpointOpts{})
 	return provider, err
 }
 
 // GetServerByName returns an openstack server found by name or an error.
-func (o *OSFramework) GetServerByName(name string) (*servers.Server, error) {
+func (o *OSFramework) GetServerByName(ctx context.Context, name string) (*servers.Server, error) {
 	listOpts := servers.ListOpts{
 		Name:       name,
 		AllTenants: true,
 	}
 
-	allPages, err := servers.List(o.computeClient, listOpts).AllPages()
+	allPages, err := servers.List(o.computeClient, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +129,12 @@ func (o *OSFramework) GetServerByName(name string) (*servers.Server, error) {
 }
 
 // GetServerByID returns the server or an error.
-func (o *OSFramework) GetServerByID(id string) (*servers.Server, error) {
-	return servers.Get(o.computeClient, id).Extract()
+func (o *OSFramework) GetServerByID(ctx context.Context, id string) (*servers.Server, error) {
+	return servers.Get(ctx, o.computeClient, id).Extract()
 }
 
-// GetNetworkIDByName returns a the id of the network found by name or an error.
-func (o *OSFramework) GetNetworkIDByName(name string) (string, error) {
+// GetNetworkIDByName returns the id of the network found by name or an error.
+func (o *OSFramework) GetNetworkIDByName(ctx context.Context, name string) (string, error) {
 	url := o.neutronClient.ServiceURL("networks")
 	listOpts := networks.ListOpts{
 		Name:   name,
@@ -158,7 +158,7 @@ func (o *OSFramework) GetNetworkIDByName(name string) (string, error) {
 		MoreHeaders: allProjectsHeader,
 	}
 
-	_, res.Err = o.neutronClient.Get(url, &res.Body, &opts)
+	_, res.Err = o.neutronClient.Get(ctx, url, &res.Body, &opts)
 	if err := res.ExtractInto(&resData); err != nil {
 		return "", err
 	}
@@ -173,12 +173,12 @@ func (o *OSFramework) GetNetworkIDByName(name string) (string, error) {
 }
 
 // GetSubnetIDByName returns the subnet's id for the given name or an error.
-func (o *OSFramework) GetSubnetIDByName(name string) (string, error) {
+func (o *OSFramework) GetSubnetIDByName(ctx context.Context, name string) (string, error) {
 	listOpts := subnets.ListOpts{
 		Name: name,
 	}
 
-	allPages, err := subnets.List(o.neutronClient, listOpts).AllPages()
+	allPages, err := subnets.List(o.neutronClient, listOpts).AllPages(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -198,30 +198,30 @@ func (o *OSFramework) GetSubnetIDByName(name string) (string, error) {
 }
 
 // GetOrCreateFloatingIP gets and existing or create a new neutron floating IP and returns it or an error.
-func (o *OSFramework) GetOrCreateFloatingIP(floatingIP, floatingNetworkID, subnetID, projectID, nodepool string, reuse bool) (*neutronfip.FloatingIP, error) {
-	fip, err := o.getFloatingIP(floatingIP, projectID, nodepool, reuse)
+func (o *OSFramework) GetOrCreateFloatingIP(ctx context.Context, floatingIP, floatingNetworkID, subnetID, projectID, nodepool string, reuse bool) (*neutronfip.FloatingIP, error) {
+	fip, err := o.getFloatingIP(ctx, floatingIP, projectID, nodepool, reuse)
 	if err == nil {
 		return fip, nil
 	}
 
 	if IsFIPNotFound(err) {
-		return o.createFloatingIP(floatingIP, floatingNetworkID, subnetID, projectID, nodepool)
+		return o.createFloatingIP(ctx, floatingIP, floatingNetworkID, subnetID, projectID, nodepool)
 	}
 
 	return nil, err
 }
 
-// EnsureAssociatedInstanceAndFIP ensures the given floating IP is associated withe the given server.
-func (o *OSFramework) EnsureAssociatedInstanceAndFIP(server *servers.Server, fip *neutronfip.FloatingIP) error {
+// EnsureAssociatedInstanceAndFIP ensures the given floating IP is associated with the given server.
+func (o *OSFramework) EnsureAssociatedInstanceAndFIP(ctx context.Context, server *servers.Server, fip *neutronfip.FloatingIP) error {
 	// Get the floating IPs port.
-	port, err := o.getPortByID(fip.PortID)
+	port, err := o.getPortByID(ctx, fip.PortID)
 	if err != nil {
 		return err
 	}
 
 	switch port.DeviceID {
 	case "":
-		return o.associateInstanceAndFIP(server, fip.FloatingIP)
+		return o.associateInstanceAndFIP(ctx, server, fip.FloatingIP)
 	case server.ID:
 		// If the port belongs to the server, we can assume the FIP is already associated with the server and return here.
 		//nolint:errcheck
@@ -232,13 +232,13 @@ func (o *OSFramework) EnsureAssociatedInstanceAndFIP(server *servers.Server, fip
 	}
 }
 
-func (o *OSFramework) associateInstanceAndFIP(server *servers.Server, floatingIP string) error {
-	opts := computefip.AssociateOpts{
-		FloatingIP: floatingIP,
+func (o *OSFramework) associateInstanceAndFIP(ctx context.Context, server *servers.Server, floatingIP string) error {
+	opts := neutronfip.UpdateOpts{
+		FixedIP: floatingIP,
 	}
 	//nolint:errcheck
 	_ = level.Info(o.logger).Log("msg", "attaching FIP to instance", "fip", floatingIP, "serverID", server.ID)
-	err := computefip.AssociateInstance(o.computeClient, server.ID, opts).ExtractErr()
+	_, err := neutronfip.Update(ctx, o.neutronClient, server.ID, opts).Extract()
 	if err != nil {
 		//nolint:errcheck
 		_ = level.Error(o.logger).Log("msg", "error attaching FIP to instance", "fip", floatingIP, "serverID", server.ID, "err", err)
@@ -248,11 +248,11 @@ func (o *OSFramework) associateInstanceAndFIP(server *servers.Server, floatingIP
 	return nil
 }
 
-func (o *OSFramework) getPortByID(id string) (*ports.Port, error) {
-	return ports.Get(o.neutronClient, id).Extract()
+func (o *OSFramework) getPortByID(ctx context.Context, id string) (*ports.Port, error) {
+	return ports.Get(ctx, o.neutronClient, id).Extract()
 }
 
-func (o *OSFramework) createFloatingIP(floatingIP, floatingNetworkID, subnetID, projectID, nodepool string) (*neutronfip.FloatingIP, error) {
+func (o *OSFramework) createFloatingIP(ctx context.Context, floatingIP, floatingNetworkID, subnetID, projectID, nodepool string) (*neutronfip.FloatingIP, error) {
 	description := createFIPDescription
 	if nodepool != "" {
 		description = fmt.Sprintf(createFIPDescriptionNodepool, nodepool)
@@ -265,7 +265,7 @@ func (o *OSFramework) createFloatingIP(floatingIP, floatingNetworkID, subnetID, 
 		ProjectID:         projectID,
 		Description:       description,
 	}
-	fip, err := neutronfip.Create(o.neutronClient, createOpts).Extract()
+	fip, err := neutronfip.Create(ctx, o.neutronClient, createOpts).Extract()
 	if err != nil {
 		//nolint:errcheck
 		_ = level.Error(o.logger).Log("msg", "error creating floating ip", "floatingIP", floatingIP, "err", err)
@@ -277,7 +277,7 @@ func (o *OSFramework) createFloatingIP(floatingIP, floatingNetworkID, subnetID, 
 	return fip, nil
 }
 
-func (o *OSFramework) getFloatingIP(floatingIP, projectID, nodepool string, reuse bool) (*neutronfip.FloatingIP, error) {
+func (o *OSFramework) getFloatingIP(ctx context.Context, floatingIP, projectID, nodepool string, reuse bool) (*neutronfip.FloatingIP, error) {
 	listOpts := neutronfip.ListOpts{
 		FloatingIP: floatingIP,
 		ProjectID:  projectID,
@@ -285,7 +285,7 @@ func (o *OSFramework) getFloatingIP(floatingIP, projectID, nodepool string, reus
 	if reuse && floatingIP == "" && nodepool != "" {
 		listOpts.Description = fmt.Sprintf(createFIPDescriptionNodepool, nodepool)
 	}
-	allPages, err := neutronfip.List(o.neutronClient, listOpts).AllPages()
+	allPages, err := neutronfip.List(o.neutronClient, listOpts).AllPages(ctx)
 	if err != nil {
 		return nil, err
 	}
