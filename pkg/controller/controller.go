@@ -74,7 +74,6 @@ var (
 
 // New returns a new Controller or an error.
 func New(opts config.Options, logger log.Logger) (*Controller, error) {
-
 	authConfig, err := config.ReadAuthConfig(opts.ConfigPath)
 	if err != nil {
 		return nil, err
