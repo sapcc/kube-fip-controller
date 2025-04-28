@@ -188,7 +188,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingNetworkName = val
 	}
 
-	floatingNetworkID, err := c.osFramework.GetNetworkIDByName(floatingNetworkName)
+	floatingNetworkID, err := c.osFramework.GetNetworkIDByName(ctx, floatingNetworkName)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingSubnetName = val
 	}
 
-	floatingSubnetID, err := c.osFramework.GetSubnetIDByName(floatingSubnetName)
+	floatingSubnetID, err := c.osFramework.GetSubnetIDByName(ctx, floatingSubnetName)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (c *Controller) syncHandler(key string) error {
 		floatingIP = val
 	}
 
-	server, err := c.getServer(node)
+	server, err := c.getServer(ctx, node)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (c *Controller) syncHandler(key string) error {
 		reuseFIPs = (val == "true")
 	}
 
-	fip, err := c.osFramework.GetOrCreateFloatingIP(floatingIP, floatingNetworkID, floatingSubnetID, server.TenantID, nodepool, reuseFIPs)
+	fip, err := c.osFramework.GetOrCreateFloatingIP(ctx, floatingIP, floatingNetworkID, floatingSubnetID, server.TenantID, nodepool, reuseFIPs)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	return c.osFramework.EnsureAssociatedInstanceAndFIP(server, fip)
+	return c.osFramework.EnsureAssociatedInstanceAndFIP(ctx, server, fip)
 }
 
 func (c *Controller) handleError(err error, key interface{}) {
@@ -276,11 +276,11 @@ func (c *Controller) enqueueAllItems() {
 	}
 }
 
-func (c *Controller) getServer(node *corev1.Node) (*servers.Server, error) {
+func (c *Controller) getServer(ctx context.Context, node *corev1.Node) (*servers.Server, error) {
 	if serverID, err := getServerIDFromNode(node); err == nil {
-		if server, err := c.osFramework.GetServerByID(serverID); err == nil {
+		if server, err := c.osFramework.GetServerByID(ctx, serverID); err == nil {
 			return server, nil
 		}
 	}
-	return c.osFramework.GetServerByName(node.GetName())
+	return c.osFramework.GetServerByName(ctx, node.GetName())
 }
