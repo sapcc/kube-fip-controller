@@ -56,8 +56,8 @@ type OSFramework struct {
 }
 
 // NewOSFramework returns a new OSFramework.
-func NewOSFramework(opts config.Options, logger log.Logger) (*OSFramework, error) {
-	provider, err := newAuthenticatedProviderClient(opts.Auth)
+func NewOSFramework(ctx context.Context, opts config.Options, logger log.Logger) (*OSFramework, error) {
+	provider, err := newAuthenticatedProviderClient(ctx, opts.Auth)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to authenticate")
 	}
@@ -81,7 +81,7 @@ func NewOSFramework(opts config.Options, logger log.Logger) (*OSFramework, error
 	}, nil
 }
 
-func newAuthenticatedProviderClient(auth *config.Auth) (*gophercloud.ProviderClient, error) {
+func newAuthenticatedProviderClient(ctx context.Context, auth *config.Auth) (*gophercloud.ProviderClient, error) {
 	opts := &tokens.AuthOptions{
 		IdentityEndpoint: auth.AuthURL,
 		Username:         auth.Username,
@@ -99,7 +99,7 @@ func newAuthenticatedProviderClient(auth *config.Auth) (*gophercloud.ProviderCli
 		return nil, err
 	}
 
-	err = openstack.AuthenticateV3(context.Background(), provider, opts, gophercloud.EndpointOpts{})
+	err = openstack.AuthenticateV3(ctx, provider, opts, gophercloud.EndpointOpts{})
 	return provider, err
 }
 

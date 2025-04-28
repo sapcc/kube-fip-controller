@@ -68,8 +68,13 @@ type Controller struct {
 	osFramework  *frameworks.OSFramework
 }
 
+var (
+	ctx = context.Background()
+)
+
 // New returns a new Controller or an error.
 func New(opts config.Options, logger log.Logger) (*Controller, error) {
+
 	authConfig, err := config.ReadAuthConfig(opts.ConfigPath)
 	if err != nil {
 		return nil, err
@@ -81,7 +86,7 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 		return nil, err
 	}
 
-	osFramework, err := frameworks.NewOSFramework(opts, logger)
+	osFramework, err := frameworks.NewOSFramework(ctx, opts, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +168,6 @@ func (c *Controller) processNextItem() bool {
 }
 
 func (c *Controller) syncHandler(key string) error {
-	ctx := context.Background()
-
 	node, exists, err := c.k8sFramework.GetNodeFromIndexerByKey(key)
 	if err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed to get object from store", "err", err) //nolint:errcheck
