@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 We use [GoReleaser][goreleaser] and GitHub workflows for automating the release
 process. Follow the instructions below for creating a new release.
 
-1. Ensure local `master` branch is up to date with `origin/master`:
+1. Ensure local `main` branch is up to date with `origin/main`:
 
   ```sh
   git fetch --all --tags
