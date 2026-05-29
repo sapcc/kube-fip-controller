@@ -13,6 +13,18 @@ dockerfile:
 
 golang:
   setGoModVersion: false
+  enableVendoring: true
+  ldflags:
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.Revision": GIT_REVISION
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.Branch":   GIT_BRANCH
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate": BUILD_DATE
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.Version":  VERSION
+
+variables:
+  GIT_REVISION: $(shell git rev-parse --short HEAD)
+  GIT_BRANCH:   $(shell git rev-parse --abbrev-ref HEAD)
+  BUILD_DATE:   $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+  VERSION:      $(shell cat VERSION)
 
 golangciLint:
   createConfig: true
@@ -42,7 +54,7 @@ githubWorkflow:
     enabled: true
 
 makefile:
-  enabled: false
+  enabled: true
 
 renovate:
   enabled: true
@@ -54,12 +66,51 @@ renovate:
         "github-actions"
       ]
       groupName: "github actions"
-      matchUpdateTypes: [
-        "major",
-        "minor",
-        "patch"
-      ]
+      matchUpdateTypes:
+        - major
+        - minor
+        - patch
       minimumReleaseAge: "14 days"
-      extends: [
-        "helpers:pinGitHubActionDigests"
-      ]
+      extends:
+        - "helpers:pinGitHubActionDigests"
+
+verbatim: |
+  DATE    = $(shell date +%Y%m%d%H%M)
+  IMAGE   ?= ghcr.io/sapcc/kube-fip-controller
+  GOOS    ?= $(shell go env GOOS)
+  BINARY  := controller
+  OPTS    ?=
+
+  .PHONY: all
+  all: bin/$(GOOS)/$(BINARY)
+
+  bin/%/$(BINARY): GIT_COMMIT  = $(shell git rev-parse --short HEAD)
+  bin/%/$(BINARY): BUILD_DATE  = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+  bin/%/$(BINARY):
+  	GOOS=$* GOARCH=amd64 go build -ldflags '-X github.com/sapcc/kube-fip-controller/cmd.BuildCommit=$(GIT_COMMIT) -X github.com/sapcc/kube-fip-controller/cmd.BuildDate=$(BUILD_DATE)' -v -o bin/$*/$(BINARY) ./cmd/main.go && chmod +x bin/$*/$(BINARY)
+
+  .PHONY: build-local
+  build-local: fmt vet ## Build binary locally to bin/<GOOS>/controller.
+  	go build $(GO_BUILDFLAGS) \\
+  	  -ldflags "-s -w $(GO_LDFLAGS)" \\
+  	  -o bin/$(GOOS)/$(BINARY) ./cmd/main.go
+
+  .PHONY: fmt
+  fmt: ## Run go fmt against code.
+  	go fmt ./...
+
+  .PHONY: vet
+  vet: ## Run go vet against code.
+  	go vet ./...
+
+  .PHONY: docker-build
+  docker-build: ## Build docker image.
+  	docker build $(OPTS) -t $(IMAGE):$(VERSION) .
+
+  .PHONY: push
+  push: docker-build ## Build and push docker image.
+  	docker push $(IMAGE):$(VERSION)
+
+  .PHONY: run-tests
+  run-tests: build-all ## Run unit tests.
+  	DEBUG=1 go test $(GO_BUILDFLAGS) -v github.com/sapcc/kube-fip-controller/pkg/controller
