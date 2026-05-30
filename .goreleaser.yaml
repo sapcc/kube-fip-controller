@@ -36,6 +36,10 @@ builds:
       - -X github.com/sapcc/go-api-declarations/bininfo.version={{ .Version }}
       - -X github.com/sapcc/go-api-declarations/bininfo.commit={{ .FullCommit  }}
       - -X github.com/sapcc/go-api-declarations/bininfo.buildDate={{ .CommitDate }} # use CommitDate instead of Date for reproducibility
+      - -X github.com/sapcc/kube-fip-controller/pkg/version.Branch={{.Env.GIT_BRANCH}}
+      - -X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate={{.Env.BUILD_DATE}}
+      - -X github.com/sapcc/kube-fip-controller/pkg/version.Revision={{.Env.GIT_REVISION}}
+      - -X github.com/sapcc/kube-fip-controller/pkg/version.Version={{.Env.VERSION}}
     main: ./cmd
     # Set the modified timestamp on the output binary to ensure that builds are reproducible.
     mod_timestamp: "{{ .CommitTimestamp }}"

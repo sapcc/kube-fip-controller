@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 SAP SE or an SAP affiliate company
+#
+# SPDX-License-Identifier: Apache-2.0
+
 FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.24-alpine AS builder
 WORKDIR /workspace
 RUN apk update && apk add make

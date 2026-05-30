@@ -1,26 +1,11 @@
-/*******************************************************************************
-*
-* Copyright 2022 SAP SE
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You should have received a copy of the License along with this
-* program. If not, you may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*******************************************************************************/
+// SPDX-FileCopyrightText: 2022 SAP SE or an SAP affiliate company
+// SPDX-License-Identifier: Apache-2.0
 
 package frameworks
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"github.com/go-kit/log"
@@ -77,7 +62,7 @@ func NewK8sFramework(options config.Options, logger log.Logger) (*K8sFramework, 
 }
 
 // AddEventHandlerFuncsToNodeInformer adds EventHandlerFuncs to the node informer.
-func (k8s *K8sFramework) AddEventHandlerFuncsToNodeInformer(addFunc, deleteFunc func(obj interface{}), updateFunc func(oldObj, newObj interface{})) {
+func (k8s *K8sFramework) AddEventHandlerFuncsToNodeInformer(addFunc, deleteFunc func(obj any), updateFunc func(oldObj, newObj any)) {
 	_, err := k8s.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    addFunc,
 		UpdateFunc: updateFunc,
@@ -124,9 +109,7 @@ func (k8s *K8sFramework) AddLabelsToNode(ctx context.Context, node *corev1.Node,
 		existingLabels = make(map[string]string)
 	}
 
-	for k, v := range labels {
-		existingLabels[k] = v
-	}
+	maps.Copy(existingLabels, labels)
 	newNode.SetLabels(existingLabels)
 
 	updatedNode, err := k8s.CoreV1().Nodes().Update(ctx, newNode, metav1.UpdateOptions{})
@@ -143,7 +126,7 @@ func (k8s *K8sFramework) GetNodeFromIndexerByKey(key string) (*corev1.Node, bool
 	if err != nil || obj == nil {
 		return nil, false, err
 	}
-	return obj.(*corev1.Node), true, nil //nolint:errcheck
+	return obj.(*corev1.Node), true, nil
 }
 
 // GetNodeInformerStore returns the Store of the node informer.
