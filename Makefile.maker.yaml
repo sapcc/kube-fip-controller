@@ -13,18 +13,17 @@ dockerfile:
 
 golang:
   setGoModVersion: false
-  enableVendoring: true
   ldflags:
     "-X github.com/sapcc/kube-fip-controller/pkg/version.Revision": GIT_REVISION
-    "-X github.com/sapcc/kube-fip-controller/pkg/version.Branch":   GIT_BRANCH
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.Branch": GIT_BRANCH
     "-X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate": BUILD_DATE
-    "-X github.com/sapcc/kube-fip-controller/pkg/version.Version":  VERSION
+    "-X github.com/sapcc/kube-fip-controller/pkg/version.Version": VERSION
 
 variables:
   GIT_REVISION: $(shell git rev-parse --short HEAD)
-  GIT_BRANCH:   $(shell git rev-parse --abbrev-ref HEAD)
-  BUILD_DATE:   $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-  VERSION:      $(shell cat VERSION)
+  GIT_BRANCH: $(shell git rev-parse --abbrev-ref HEAD)
+  BUILD_DATE: $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+  VERSION: $(shell cat VERSION)
 
 golangciLint:
   createConfig: true

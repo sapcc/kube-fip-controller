@@ -98,11 +98,17 @@ prepare-static-check: FORCE install-goimports install-golangci-lint install-shel
 
 # To add additional flags or values (before the default ones), specify the variable in the environment, e.g. `GO_BUILDFLAGS='-tags experimental' make`.
 # To override the default flags or values, specify the variable on the command line, e.g. `make GO_BUILDFLAGS='-tags experimental'`.
-GO_BUILDFLAGS += -mod vendor
-GO_LDFLAGS += -X github.com/sapcc/kube-fip-controller/pkg/version.Branch=$(GIT_BRANCH) -X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate=$(BUILD_DATE) -X github.com/sapcc/kube-fip-controller/pkg/version.Revision=$(GIT_REVISION) -X github.com/sapcc/kube-fip-controller/pkg/version.Version=$(VERSION)
-GO_TESTFLAGS +=
-GO_TESTENV +=
-GO_BUILDENV +=
+GO_BUILDFLAGS +=
+GO_LDFLAGS    += -X github.com/sapcc/kube-fip-controller/pkg/version.Branch=$(GIT_BRANCH) -X github.com/sapcc/kube-fip-controller/pkg/version.BuildDate=$(BUILD_DATE) -X github.com/sapcc/kube-fip-controller/pkg/version.Revision=$(GIT_REVISION) -X github.com/sapcc/kube-fip-controller/pkg/version.Version=$(VERSION)
+GO_TESTFLAGS  +=
+GO_TESTENV    +=
+GO_BUILDENV   +=
+
+# Custom variables provided in Makefile.maker.yaml
+export BUILD_DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+export GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+export GIT_REVISION = $(shell git rev-parse --short HEAD)
+export VERSION = $(shell cat VERSION)
 
 build-all: build/kube-fip-controller
 
@@ -142,7 +148,7 @@ run-golangci-lint: FORCE install-golangci-lint
 
 run-shellcheck: FORCE install-shellcheck
 	@printf "\e[1;36m>> shellcheck\e[0m\n"
-	@find . \( -path './vendor/*' -prune \) -o -type f \( -name '*.bash' -o -name '*.ksh' -o -name '*.zsh' -o -name '*.sh' -o -name '*.shlib' \) -exec shellcheck  {} +
+	@find .  -type f \( -name '*.bash' -o -name '*.ksh' -o -name '*.zsh' -o -name '*.sh' -o -name '*.shlib' \) -exec shellcheck  {} +
 
 run-typos: FORCE install-typos
 	@printf "\e[1;36m>> typos\e[0m\n"
@@ -175,14 +181,8 @@ static-check: FORCE
 build:
 	@mkdir $@
 
-vendor: FORCE
+tidy-deps: FORCE
 	go mod tidy
-	go mod vendor
-	go mod verify
-
-vendor-compat: FORCE
-	go mod tidy -compat=$(shell awk '$$1 == "go" { print $$2 }' < go.mod)
-	go mod vendor
 	go mod verify
 
 license-headers: FORCE install-addlicense install-reuse
@@ -261,8 +261,7 @@ help: FORCE
 	@printf "  \e[36mstatic-check\e[0m                 Run static code checks\n"
 	@printf "\n"
 	@printf "\e[1mDevelopment\e[0m\n"
-	@printf "  \e[36mvendor\e[0m                       Run go mod tidy, go mod verify, and go mod vendor.\n"
-	@printf "  \e[36mvendor-compat\e[0m                Same as 'make vendor' but go mod tidy will use '-compat' flag with the Go version from go.mod file as value.\n"
+	@printf "  \e[36mtidy-deps\e[0m                    Run go mod tidy and go mod verify.\n"
 	@printf "  \e[36mlicense-headers\e[0m              Add (or overwrite) license headers on all non-vendored source code files.\n"
 	@printf "  \e[36mcheck-dependency-licenses\e[0m    Check all dependency licenses using go-licence-detector.\n"
 	@printf "  \e[36mgoimports\e[0m                    Run goimports on all non-vendored .go files\n"
