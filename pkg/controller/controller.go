@@ -1,21 +1,5 @@
-/*******************************************************************************
-*
-* Copyright 2022 SAP SE
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You should have received a copy of the License along with this
-* program. If not, you may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*******************************************************************************/
+// SPDX-FileCopyrightText: 2022 SAP SE or an SAP affiliate company
+// SPDX-License-Identifier: Apache-2.0
 
 package controller
 
@@ -63,7 +47,7 @@ const (
 type Controller struct {
 	opts         config.Options
 	logger       log.Logger
-	queue        workqueue.TypedRateLimitingInterface[interface{}]
+	queue        workqueue.TypedRateLimitingInterface[any]
 	k8sFramework *frameworks.K8sFramework
 	osFramework  *frameworks.OSFramework
 }
@@ -93,7 +77,7 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 	c := &Controller{
 		opts:         opts,
 		logger:       log.With(logger, "component", "controller"),
-		queue:        workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedItemExponentialFailureRateLimiter[interface{}](30*time.Second, 600*time.Second)),
+		queue:        workqueue.NewTypedRateLimitingQueue(workqueue.NewTypedItemExponentialFailureRateLimiter[any](30*time.Second, 600*time.Second)),
 		k8sFramework: k8sFramework,
 		osFramework:  osFramework,
 	}
@@ -101,9 +85,9 @@ func New(opts config.Options, logger log.Logger) (*Controller, error) {
 	c.k8sFramework.AddEventHandlerFuncsToNodeInformer(
 		c.enqueueItem,
 		c.enqueueItem,
-		func(oldObj, newObj interface{}) {
-			o := oldObj.(*corev1.Node) //nolint:errcheck
-			n := newObj.(*corev1.Node) //nolint:errcheck
+		func(oldObj, newObj any) {
+			o := oldObj.(*corev1.Node)
+			n := newObj.(*corev1.Node)
 			if !reflect.DeepEqual(o.GetAnnotations(), n.GetAnnotations()) || !reflect.DeepEqual(o.GetLabels(), n.GetLabels()) {
 				c.enqueueItem(newObj)
 			}
@@ -161,7 +145,7 @@ func (c *Controller) processNextItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	err := c.syncHandler(key.(string)) //nolint:errcheck
+	err := c.syncHandler(key.(string))
 	c.handleError(err, key)
 	return true
 }
@@ -244,7 +228,7 @@ func (c *Controller) syncHandler(key string) error {
 	return c.osFramework.EnsureAssociatedInstanceAndFIP(ctx, server, fip)
 }
 
-func (c *Controller) handleError(err error, key interface{}) {
+func (c *Controller) handleError(err error, key any) {
 	if err == nil {
 		metrics.MetricSuccessfulOperations.Inc()
 		c.queue.Forget(key)
@@ -263,7 +247,7 @@ func (c *Controller) handleError(err error, key interface{}) {
 	_ = level.Info(c.logger).Log("msg", "dropping from queue", "key", key, "err", err) //nolint:errcheck
 }
 
-func (c *Controller) enqueueItem(obj interface{}) {
+func (c *Controller) enqueueItem(obj any) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(err)
