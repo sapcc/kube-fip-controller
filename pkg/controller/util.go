@@ -40,7 +40,7 @@ func getServerIDFromNode(node *corev1.Node) (string, error) {
 	return "", errors.New("serverID not found in provider ID")
 }
 
-func getLabelValue(obj interface{}, lblKey string) (string, bool) {
+func getLabelValue(obj any, lblKey string) (string, bool) {
 	objMeta, err := meta.Accessor(obj)
 	if err != nil {
 		return "", false
