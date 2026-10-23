@@ -5,7 +5,7 @@ COPY . .
 RUN go mod download
 RUN make build CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH}
 
-FROM --platform=${BUILDPLATFORM:-linux/amd64} alpine:3.21
+FROM --platform=${BUILDPLATFORM:-linux/amd64} alpine:3.21@sha256:ee16d92f96db08d9d2d07da48555a27f3a69d8f0759021dbc601195ed0d2b5bd
 LABEL source_repository="https://github.com/sapcc/kube-fip-controller"
 
 WORKDIR /
